@@ -1,0 +1,13 @@
+[default]
+client=nyse
+
+[nyse]
+host=192.168.17.1
+user=admin
+password=test
+
+[facebook]
+host=192.168.20.2
+user=admin
+password=test2
+custominfo=what
