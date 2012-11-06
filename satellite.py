@@ -202,10 +202,14 @@ def delsystem(sat,key,name):
   print "Not doing anything"
   sys.exit(1)
 
-def getinfo(sat,key,machine,machines,ids,custominfo):
+def getinfo(sat,key,machine,machines,ids,custominfo,groups=False):
  #machine=args[0]
  id=ids[machine]
  ips=[]
+ if groups:
+  groups=[]
+  for gr in sat.system.listGroups(key,id):
+   if gr["subscribed"]==1:groups.append(gr["system_group_name"])
  customvalues=sat.system.getCustomValues(key,id)
  network=sat.system.getNetworkDevices(key,id)
  dmi=sat.system.getDmi(key,id)
@@ -223,6 +227,7 @@ def getinfo(sat,key,machine,machines,ids,custominfo):
     machines[machine].append(customvalues[cus])
  info=machines[machine]
  print "%s;%s;%s;%s;%s;%s" % (machine,info[0],info[1],info[2],info[3],";".join(info[4:]))
+ if groups:print "GROUPS: %s" % (" ".join(groups))
 
 if clients or not sathost or not satuser or not satpassword:
  #parse .satelliterc file
@@ -322,7 +327,7 @@ if machines:
    sys.exit(1)
   else:
    machine=args[0]
-   getinfo(sat,key,machine,machines,ids,custominfo)
+   getinfo(sat,key,machine,machines,ids,custominfo,groups=True)
    sys.exit(0)
  for machine in sorted(ids.keys()):getinfo(sat,key,machine,machines,ids,custominfo)
  sys.exit(0)
