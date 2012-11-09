@@ -34,24 +34,24 @@ import time,datetime
 __author__ = "Karim Boumedhel"
 __credits__ = ["Karim Boumedhel","Pablo Iranzo"]
 __license__ = "GPL"
-__version__ = "1.2.8"
+__version__ = "1.3"
 __maintainer__ = "Karim Boumedhel"
 __email__ = "karimboumedhel@gmail.com"
 __status__ = "Production"
 
 #-1-handle arguments
 usage="satellite.py [OPTION] [ARGS]"
-version="1.2.8"
+version="1.3"
 parser = optparse.OptionParser(usage=usage,version=version)
 parser.add_option("-a", "--add", action="store_true", dest="adderratas", help="When cloning,add erratas to clone")
 parser.add_option("-c", "--client",dest="client", type="string", help="Specify Client")
 parser.add_option("-d", "--deletechannel", action="store_true", dest="deletechannel", help="Delete software channel")
 parser.add_option("-e", "--execute",dest="execute", type="string", help="Execute given command")
 parser.add_option("-f", "--deploy",dest="deploy", type="string", help="Deploy specified file")
-parser.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines")
 parser.add_option("-g", "--groups", action="store_true", dest="groups", help="List System Groups")
-parser.add_option("-l", "--clients", action="store_true", dest="clients", help="List Available clients")
 parser.add_option("-k", "--ks", action="store_true", dest="ks", help="List Kickstarts")
+parser.add_option("-l", "--clients", action="store_true", dest="clients", help="List Available clients")
+parser.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines")
 parser.add_option("-r", "--revision", dest="revision", type="int", default=0, help="When showing contents with -s , get specific revision")
 parser.add_option("-s", "--showcontents", action="store_true", dest="showcontents",help="When getting file with -z, show contents")
 parser.add_option("-u", "--users", action="store_true", dest="users", help="List Users")
@@ -74,9 +74,9 @@ parser.add_option("-U", "--uploadfile", action="store_true", dest="uploadfile", 
 parser.add_option("-X", "--delete", action="store_true", dest="deletesystem", help="Delete specified system. A confirmation will be asked")
 parser.add_option("-Y", "--yes", action="store_true", dest="yes", help="Create file when uploading config file to specified channel and path, if they dont exist")
 parser.add_option("-Z", "--createfile", action="store_true", dest="createfile", help="Create file when uploading config file. Channel and path will be retrieved from the line with NOTE within the orifile passed as argument")
-parser.add_option("-1", "--sathost", dest="sathost", type="string", help="Satellite Host, if not defined in rc file")
-parser.add_option("-2", "--satuser", dest="satuser", type="string", help="Satellite User, if not defined in rc file")
-parser.add_option("-3", "--satpassword", dest="satpassword", type="string", help="Satellite Password, if not defined in rc file. Note a path can also be specified in conjunction with passwordfile=True in the rc file, to use a bz2-encrypted file containing password")
+parser.add_option("-1", "--sathost", dest="sathost", type="string", help="Satellite Host, if not defined in conf file")
+parser.add_option("-2", "--satuser", dest="satuser", type="string", help="Satellite User, if not defined in conf file")
+parser.add_option("-3", "--satpassword", dest="satpassword", type="string", help="Satellite Password, if not defined in conf file. Note a path can also be specified in conjunction with passwordfile=True in the rc file, to use a bz2-encrypted file containing password")
 
 (options, args)=parser.parse_args()
 adderratas=options.adderratas
@@ -230,11 +230,7 @@ def getinfo(sat,key,machine,machines,ids,custominfo,groups=False):
  if groups:print "GROUPS: %s" % (" ".join(groups))
 
 if clients or not sathost or not satuser or not satpassword:
- #parse .satelliterc file
- if os.path.exists(".satelliterc"):
-  satelliterc=".satelliterc"
- else:
-  satelliterc=os.environ['HOME']+"/.satelliterc"
+ satelliterc="%s/satellite.ini" % (os.environ['HOME'])
  if not os.path.exists(satelliterc):
   print "Missing %s in your home directory or in current directory.Check documentation" % satelliterc
   sys.exit(1)
