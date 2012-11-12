@@ -54,9 +54,9 @@ parser.add_option("-l", "--clients", action="store_true", dest="clients", help="
 parser.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines")
 parser.add_option("-r", "--revision", dest="revision", type="int", default=0, help="When showing contents with -s , get specific revision")
 parser.add_option("-s", "--showcontents", action="store_true", dest="showcontents",help="When getting file with -z, show contents")
+parser.add_option("-t", "--getfile",  action="store_true", dest="getfile", help="Get config file")
 parser.add_option("-u", "--users", action="store_true", dest="users", help="List Users")
 parser.add_option("-w", "--clonechannel", action="store_true", dest="clonechannel", help="Clone software channel")
-parser.add_option("-z", "--getfile",  action="store_true", dest="getfile", help="Get config file")
 parser.add_option("-A", "--activationkeys", action="store_true", dest="activationkeys", help="List activation keys")
 parser.add_option("-C", "--configchannel", dest="configchannel", type="string", help="Use this config channel")
 parser.add_option("-D", "--duplicatescripts", action="store_true", dest="duplicatescripts", help="Duplicate scripts from this profile")
@@ -357,7 +357,7 @@ if configs or extendedconfigs:
    for el in sorted(sat.configchannel.listSubscribedSystems(key,conf["label"])): machines.append(el["name"])
    print ";".join(machines)
 
-if getfile:
+if getfile or showcontents:
  if len(args)!=1:
   print "Usage:%s -z configfile" % (sys.argv[0])
   sys.exit(1)
