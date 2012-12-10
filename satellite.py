@@ -194,6 +194,8 @@ def delsystem(sat,key,name):
  if len(id) ==0:
   print "Machine %s not found" % (name)
   sys.exit(1)
+ elif len(id) >1:
+  print "Several profiles found for Machine %s" % (name)
  confirmation=raw_input("Confirm you want to delete profile of %s(Y|N):" % name)
  if confirmation =="Y":
   sat.system.deleteSystems(key,id)
@@ -204,30 +206,31 @@ def delsystem(sat,key,name):
 
 def getinfo(sat,key,machine,machines,ids,custominfo,groups=False):
  #machine=args[0]
- id=ids[machine]
- ips=[]
- if groups:
-  groups=[]
-  for gr in sat.system.listGroups(key,id):
-   if gr["subscribed"]==1:groups.append(gr["system_group_name"])
- customvalues=sat.system.getCustomValues(key,id)
- network=sat.system.getNetworkDevices(key,id)
- dmi=sat.system.getDmi(key,id)
- channel=sat.system.getSubscribedBaseChannel(key,id)["label"]
- checked=str(sat.system.getId(key,machine)[0]["last_checkin"]).split("T")[0]
- product=dmi["product"]
- for net in network:
-  if net.has_key("ip") and net["ip"] !="127.0.0.1" and net["ip"] !="":
-   ips.append(net["ip"])
-   if mac:ips.append(net['hardware_address'])
- machines[machine]=[product,channel,checked,";".join(ips)]
- if custominfo:
-  for cus in custominfo:
-   if customvalues.has_key(cus):
-    machines[machine].append(customvalues[cus])
- info=machines[machine]
- print "%s;%s;%s;%s;%s;%s" % (machine,info[0],info[1],info[2],info[3],";".join(info[4:]))
- if groups:print "GROUPS: %s" % (" ".join(groups))
+ ids=ids[machine]
+ for id in ids:
+  ips=[]
+  if groups:
+   groups=[]
+   for gr in sat.system.listGroups(key,id):
+    if gr["subscribed"]==1:groups.append(gr["system_group_name"])
+  customvalues=sat.system.getCustomValues(key,id)
+  network=sat.system.getNetworkDevices(key,id)
+  dmi=sat.system.getDmi(key,id)
+  channel=sat.system.getSubscribedBaseChannel(key,id)["label"]
+  checked=str(sat.system.getId(key,machine)[0]["last_checkin"]).split("T")[0]
+  product=dmi["product"]
+  for net in network:
+   if net.has_key("ip") and net["ip"] !="127.0.0.1" and net["ip"] !="":
+    ips.append(net["ip"])
+    if mac:ips.append(net['hardware_address'])
+  machines[machine]=[product,channel,checked,";".join(ips)]
+  if custominfo:
+   for cus in custominfo:
+    if customvalues.has_key(cus):
+     machines[machine].append(customvalues[cus])
+  info=machines[machine]
+  print "%s;%s;%s;%s;%s;%s" % (machine,info[0],info[1],info[2],info[3],";".join(info[4:]))
+  #if groups:print "GROUPS: %s" % (" ".join(groups))
 
 if clients or not sathost or not satuser or not satpassword:
  satelliterc="%s/satellite.ini" % (os.environ['HOME'])
@@ -316,7 +319,11 @@ if machines:
  results=[]
  ids={}
  machines={}
- for machine in sat.system.listSystems(key):ids[machine["name"]]=int(machine["id"])
+ for machine in sat.system.listSystems(key):
+  if not ids.has_key(machine["name"]): 
+   ids[machine["name"]]=[int(machine["id"])]
+  else:
+   ids[machine["name"]].append(int(machine["id"]))
  if len(args)== 1:
   if args[0] not in ids.keys():
    print "Machine %s not found" % args[0]
