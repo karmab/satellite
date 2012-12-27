@@ -687,7 +687,34 @@ if deploy:
   print "Deployment of %s scheduled for %s" % (deploypath,system)
  sys.exit(0)
 
-
+#subscribe given machine to indicated configchannel
+if configchannel and len(args)==1:
+ name=args[0]
+ #TEST SPECIFIED CHANNEL EXISTS
+ channelexists=sat.configchannel.channelExists(key,configchannel)
+ if channelexists == 0:
+  print "Channel %s doesnt exist..." % configchannel
+  sys.exit(0)
+ ids={}
+ machines={}
+ for machine in sat.system.listSystems(key):
+  if not ids.has_key(machine["name"]): 
+   ids[machine["name"]]=[int(machine["id"])]
+  else:
+   ids[machine["name"]].append(int(machine["id"]))
+ if name not in ids.keys():
+  print "Machine %s not found" % args[0]
+  sys.exit(1)
+ for id in ids[name]:
+  configchannels=[]
+  for chan in sat.system.config.listChannels(key,id):configchannels.append(chan["label"])
+  if configchannel in configchannels:
+   print "%s allready in Config Channel %s" % (name,configchannel)
+  else: 
+   configchannels.append(configchannel)
+   sat.system.config.setChannels(key,[id],configchannels)
+   print "%s added toConfig Channel %s" % (name,configchannel)
+ 
 
 if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys:
  print "No action specified"
