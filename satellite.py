@@ -34,14 +34,14 @@ import time,datetime
 __author__ = "Karim Boumedhel"
 __credits__ = ["Karim Boumedhel","Pablo Iranzo"]
 __license__ = "GPL"
-__version__ = "1.3"
+__version__ = "1.4"
 __maintainer__ = "Karim Boumedhel"
 __email__ = "karimboumedhel@gmail.com"
 __status__ = "Production"
 
 #-1-handle arguments
 usage="satellite.py [OPTION] [ARGS]"
-version="1.3"
+version="1.4"
 parser = optparse.OptionParser(usage=usage,version=version)
 parser.add_option("-a", "--add", action="store_true", dest="adderratas", help="When cloning,add erratas to clone")
 parser.add_option("-c", "--client",dest="client", type="string", help="Specify Client")
@@ -353,7 +353,6 @@ if channels:
 
 if configs or extendedconfigs:
  if configchannel:
-  #if len(args)!=1:specificconfigchannel=args[0]
   confs=sat.configchannel.listFiles(key,configchannel)
   for f in confs:print f["path"]
   sys.exit(0)
@@ -713,7 +712,7 @@ if configchannel and len(args)==1:
   else: 
    configchannels.append(configchannel)
    sat.system.config.setChannels(key,[id],configchannels)
-   print "%s added toConfig Channel %s" % (name,configchannel)
+   print "%s added to Config Channel %s" % (name,configchannel)
  
 
 if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys:
