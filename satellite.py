@@ -57,6 +57,7 @@ parser.add_option("-s", "--showcontents", action="store_true", dest="showcontent
 parser.add_option("-t", "--getfile",  action="store_true", dest="getfile", help="Get config file")
 parser.add_option("-u", "--users", action="store_true", dest="users", help="List Users")
 parser.add_option("-w", "--clonechannel", action="store_true", dest="clonechannel", help="Clone software channel")
+parser.add_option("-x", "--children", action="store_true", dest="children", help="Clone children when cloning software channel")
 parser.add_option("-A", "--activationkeys", action="store_true", dest="activationkeys", help="List activation keys")
 parser.add_option("-C", "--configchannel", dest="configchannel", type="string", help="Use this config channel")
 parser.add_option("-D", "--duplicatescripts", action="store_true", dest="duplicatescripts", help="Duplicate scripts from this profile")
@@ -94,6 +95,7 @@ parentchannel=options.parentchannel
 configchannel=options.configchannel
 deletechannel=options.deletechannel
 clonechannel=options.clonechannel
+children=options.children
 destchannelname=options.destchannelname
 configs=options.configs
 extendedconfigs=options.extendedconfigs
@@ -336,19 +338,20 @@ if machines:
  sys.exit(0)
 
 if channels:
+ if len(args)==1:softwarechannel=args[0]
  channels={}
  for chan in sorted(sat.channel.listAllChannels(key)):
   channels[chan["label"]]=[chan["name"],chan["packages"],chan["systems"],chan["id"]]
  print "label;name;packages;systems"
  if softwarechannel:
   if channels.has_key(softwarechannel):
-   print "%s;%s;%s" % (softwarechannel,channels[softwarechannel][0],channels[softwarechannel][1])
+   print "%s;%s;%s;%s" % (softwarechannel,channels[softwarechannel][0],channels[softwarechannel][1],channels[softwarechannel][2])
    sys.exit(0)
   else:
    print "Channel not found"
    sys.exit(1)
  for chan in sorted(channels.keys()):
-  print "%s;%s;%s" % (chan,channels[chan][0],channels[chan][1])
+  print "%s;%s;%s;%s" % (chan,channels[chan][0],channels[chan][1],channels[chan][2])
  sys.exit(0)
 
 if configs or extendedconfigs:
@@ -500,6 +503,9 @@ if clonechannel:
    print "Software channel cant be blank"
    sys.exit(1)
  checksoftwarechannel(sat,key,softwarechannel)
+ if children:
+  childrenlist=[]
+  for child in sat.channel.software.listChildren(key,softwarechannel):childrenlist.append(child["label"])
  if len(args)==1:
   destchannel=args[0]
  else:
@@ -508,19 +514,32 @@ if clonechannel:
    print "Destination channel cant be blank or less than 6 characters"
    sys.exit(1)
  if not destchannelname:destchannelname=destchannel
- destchannel={"name":destchannelname,"label":destchannel,"summary":destchannelname}
+ destchannelinfo={"name":destchannelname,"label":destchannel,"summary":destchannelname}
  if parentchannel:
   checksoftwarechannel(sat,key,parentchannel)
-  destchannel["parent_label"]=parentchannel
+  destchannelinfo["parent_label"]=parentchannel
  if adderratas:
-  sat.channel.software.clone(key,softwarechannel,destchannel,False)
+  sat.channel.software.clone(key,softwarechannel,destchannelinfo,False)
  else:
-  sat.channel.software.clone(key,softwarechannel,destchannel,True)
- print "Channel successfully cloned"
+  sat.channel.software.clone(key,softwarechannel,destchannelinfo,True)
+ print "Channel %s successfully cloned to %s" % (softwarechannel,:destchannel)
  if adderratas and checkerratas:
-  print "prout"
-
+  print "erratas should be added"
+ if children:
+  for child in childrenlist:
+   destchildchannel=raw_input("Enter Destination channel for %s:\n" % child)
+   if destchildchannel =="" or len(destchildchannel) < 6:
+    print "Destination channel cant be blank or less than 6 characters"
+    sys.exit(1)
+   destchildchannelinfo={"name":destchildchannel,"label":destchildchannel,"summary":destchildchannel,"parent_label":destchannel}
+   if adderratas:
+    sat.channel.software.clone(key,softwarechannel,destchannelinfo,False)
+   else:
+    sat.channel.software.clone(key,softwarechannel,destchannelinfo,True)
+   print "Channel %s successfully cloned to %s" % (child,destchildchannel)
+   
 if deletechannel: 
+ if len(args)==1:softwarechannel=args[0]
  if not softwarechannel:
   softwarechannel=raw_input("Enter original channel:\n")
   if softwarechannel =="":
