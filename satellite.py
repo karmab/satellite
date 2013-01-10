@@ -348,16 +348,28 @@ if channels:
  channels={}
  for chan in sorted(sat.channel.listAllChannels(key)):
   channels[chan["label"]]=[chan["name"],chan["packages"],chan["systems"],chan["id"]]
- print "label;name;packages;systems"
+ print "LABEL;NAME;PACKAGES;SYSTEMS"
  if softwarechannel:
   if channels.has_key(softwarechannel):
    print "%s;%s;%s;%s" % (softwarechannel,channels[softwarechannel][0],channels[softwarechannel][1],channels[softwarechannel][2])
+   if children:
+     childchannels=[]
+     childreninfo=sat.channel.software.listChildren(key,softwarechannel)
+     if len(childreninfo) >=1:
+      for child in childreninfo:childchannels.append(child["label"])
+      print "CHILDCHANNELS:"+";".join(childchannels)
    sys.exit(0)
   else:
    print "Channel not found"
    sys.exit(1)
  for chan in sorted(channels.keys()):
   print "%s;%s;%s;%s" % (chan,channels[chan][0],channels[chan][1],channels[chan][2])
+  if children:
+    childchannels=[]
+    childreninfo=sat.channel.software.listChildren(key,chan)
+    if len(childreninfo) >=1:
+     for child in childreninfo:childchannels.append(child["label"])
+     print "CHILDCHANNELS:"+";".join(childchannels)
  sys.exit(0)
 
 if configs or extendedconfigs:
