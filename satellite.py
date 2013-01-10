@@ -57,7 +57,7 @@ parser.add_option("-s", "--showcontents", action="store_true", dest="showcontent
 parser.add_option("-t", "--getfile",  action="store_true", dest="getfile", help="Get config file")
 parser.add_option("-u", "--users", action="store_true", dest="users", help="List Users")
 parser.add_option("-w", "--clonechannel", action="store_true", dest="clonechannel", help="Clone software channel")
-parser.add_option("-x", "--children", action="store_true", dest="children", help="Clone children when cloning software channel")
+parser.add_option("-x", "--children", action="store_true", dest="children", help="Handle children when cloning,deleting software channels or listing a machine")
 parser.add_option("-A", "--activationkeys", action="store_true", dest="activationkeys", help="List activation keys")
 parser.add_option("-C", "--configchannel", dest="configchannel", type="string", help="Use this config channel")
 parser.add_option("-D", "--duplicatescripts", action="store_true", dest="duplicatescripts", help="Duplicate scripts from this profile")
@@ -206,7 +206,7 @@ def delsystem(sat,key,name):
   print "Not doing anything"
   sys.exit(1)
 
-def getinfo(sat,key,machine,machines,ids,custominfo,groups=False):
+def getinfo(sat,key,machine,machines,ids,custominfo,groups=False,children=children,softwarechannel=None):
  #machine=args[0]
  ids=ids[machine]
  for id in ids:
@@ -219,6 +219,7 @@ def getinfo(sat,key,machine,machines,ids,custominfo,groups=False):
   network=sat.system.getNetworkDevices(key,id)
   dmi=sat.system.getDmi(key,id)
   channel=sat.system.getSubscribedBaseChannel(key,id)["label"]
+  if softwarechannel and channel!=softwarechannel:return
   checked=str(sat.system.getId(key,machine)[0]["last_checkin"]).split("T")[0]
   product=dmi["product"]
   for net in network:
@@ -233,6 +234,11 @@ def getinfo(sat,key,machine,machines,ids,custominfo,groups=False):
   info=machines[machine]
   print "%s;%s;%s;%s;%s;%s" % (machine,info[0],info[1],info[2],info[3],";".join(info[4:]))
   #if groups:print "GROUPS: %s" % (" ".join(groups))
+  if children:
+   childreninfo=sat.system.listSubscribedChildChannels(key,id)
+   childchannels=[]
+   for child in childreninfo:childchannels.append(child["label"])
+   print ";".join(childchannels)
 
 if clients or not sathost or not satuser or not satpassword:
  satelliterc="%s/satellite.ini" % (os.environ['HOME'])
@@ -332,9 +338,9 @@ if machines:
    sys.exit(1)
   else:
    machine=args[0]
-   getinfo(sat,key,machine,machines,ids,custominfo,groups=True)
+   getinfo(sat,key,machine,machines,ids,custominfo,groups=True,children=children,softwarechannel=softwarechannel)
    sys.exit(0)
- for machine in sorted(ids.keys()):getinfo(sat,key,machine,machines,ids,custominfo)
+ for machine in sorted(ids.keys()):getinfo(sat,key,machine,machines,ids,custominfo,children=children,softwarechannel=softwarechannel)
  sys.exit(0)
 
 if channels:
