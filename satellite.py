@@ -356,8 +356,8 @@ if channels:
      childchannels=[]
      childreninfo=sat.channel.software.listChildren(key,softwarechannel)
      if len(childreninfo) >=1:
-      for child in childreninfo:childchannels.append(child["label"])
-      print "CHILDCHANNELS:"+";".join(childchannels)
+      print "CHILDCHANNELS:"
+      for child in childreninfo:print child["label"]
    sys.exit(0)
   else:
    print "Channel not found"
