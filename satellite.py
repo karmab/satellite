@@ -522,7 +522,7 @@ if clonechannel:
   sat.channel.software.clone(key,softwarechannel,destchannelinfo,False)
  else:
   sat.channel.software.clone(key,softwarechannel,destchannelinfo,True)
- print "Channel %s successfully cloned to %s" % (softwarechannel,:destchannel)
+ print "Channel %s successfully cloned to %s" % (softwarechannel,destchannel)
  if adderratas and checkerratas:
   print "erratas should be added"
  if children:
@@ -550,9 +550,15 @@ if deletechannel:
  if confirmation !="Y":
    print "Leaving"
    sys.exit(1)
+ childrenlist=[]
+ for child in sat.channel.software.listChildren(key,softwarechannel):childrenlist.append(child["label"])
+ if len(childrenlist) >= 1:
+  for children in childrenlist:
+   sat.channel.software.delete(key,children)
+   print "Child Channel %s sucessfully deleted" % (children)
  result=sat.channel.software.delete(key,softwarechannel)
  if result==1:
-  print "Channel successfully deleted"
+  print "Channel %s successfully deleted" % (softwarechannel)
   sys.exit(0)
 
 if ks or extendedks:
