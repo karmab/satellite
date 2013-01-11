@@ -20,7 +20,7 @@
 
 """
 interacts with satellite api
-(based on http://spacewalk.redhat.com/documentation/api/1.6 ) 
+(based on http://spacewalk.redhat.com/documentation/api/1.8 ) 
 """
 
 import bz2
@@ -34,14 +34,14 @@ import time,datetime
 __author__ = "Karim Boumedhel"
 __credits__ = ["Karim Boumedhel","Pablo Iranzo"]
 __license__ = "GPL"
-__version__ = "1.4"
+__version__ = "2.0"
 __maintainer__ = "Karim Boumedhel"
 __email__ = "karimboumedhel@gmail.com"
 __status__ = "Production"
 
 #-1-handle arguments
 usage="satellite.py [OPTION] [ARGS]"
-version="1.4"
+version="2.0"
 parser = optparse.OptionParser(usage=usage,version=version)
 parser.add_option("-a", "--add", action="store_true", dest="adderratas", help="When cloning,add erratas to clone")
 parser.add_option("-b", "--basechannel",dest="basechannel", type="string", help="Set basechannel for specified machine")
@@ -535,7 +535,7 @@ if clonechannel:
  if destchannel =="" or len(destchannel) < 6:
    print "Destination channel cant be blank or less than 6 characters"
    sys.exit(1)
- if not destchannelname:destchannelname=destchannel
+ if not destchannelname:destchannelname=sat.channel.software.getDetails(key,softwarechannel)["name"]
  destchannelinfo={"name":destchannelname,"label":destchannel,"summary":destchannelname}
  if parentchannel:
   checksoftwarechannel(sat,key,parentchannel)
@@ -553,11 +553,12 @@ if clonechannel:
    if destchildchannel =="" or len(destchildchannel) < 6:
     print "Destination channel cant be blank or less than 6 characters"
     sys.exit(1)
-   destchildchannelinfo={"name":destchildchannel,"label":destchildchannel,"summary":destchildchannel,"parent_label":destchannel}
+   destchildchannelname=sat.channel.software.getDetails(key,child)["name"]
+   destchildchannelinfo={"name":destchildchannelname,"label":destchildchannel,"summary":destchildchannel,"parent_label":destchannel}
    if adderratas:
-    sat.channel.software.clone(key,softwarechannel,destchannelinfo,False)
+    sat.channel.software.clone(key,child,destchildchannelinfo,False)
    else:
-    sat.channel.software.clone(key,softwarechannel,destchannelinfo,True)
+    sat.channel.software.clone(key,child,destchildchannelinfo,True)
    print "Channel %s successfully cloned to %s" % (child,destchildchannel)
    
 if deletechannel: 
