@@ -797,7 +797,7 @@ if softwarechannel and len(args)==1:
   print "Machine %s not found or duplicated.Not doing anything" % (name)
   sys.exit(0)
  systemid=systemid[0]["id"]
- childreninfo=sat.system.listSubscribedChildChannels(key,sytemid)
+ childreninfo=sat.system.listSubscribedChildChannels(key,systemid)
  childchannels=[]
  for child in childreninfo:
   label=child["label"]
@@ -806,9 +806,9 @@ if softwarechannel and len(args)==1:
    sys.exit(1)
   else:
    childchannels.append(child["label"])
- childchannels.append(label)
+ childchannels.append(softwarechannel)
  sat.system.setChildChannels(key,systemid,childchannels)
- print "Child channel %s added to %s:" % (softwarechannel,name)
+ print "Child channel %s added to %s" % (softwarechannel,name)
 
 
 #remove  given childchannel of indicated machine
