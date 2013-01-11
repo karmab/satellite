@@ -44,6 +44,7 @@ usage="satellite.py [OPTION] [ARGS]"
 version="1.4"
 parser = optparse.OptionParser(usage=usage,version=version)
 parser.add_option("-a", "--add", action="store_true", dest="adderratas", help="When cloning,add erratas to clone")
+parser.add_option("-b", "--basechannel",dest="basechannel", type="string", help="Set basechannel for specified machine")
 parser.add_option("-c", "--client",dest="client", type="string", help="Specify Client")
 parser.add_option("-d", "--deletechannel", action="store_true", dest="deletechannel", help="Delete software channel")
 parser.add_option("-e", "--execute",dest="execute", type="string", help="Execute given command")
@@ -69,6 +70,7 @@ parser.add_option("-I", "--channelsummary", dest="destchannelname", type="string
 parser.add_option("-K", "--extendedks", action="store_true", dest="extendedks", help="List Kickstarts,along with their scripts")
 parser.add_option("-L", "--channels", action="store_true", dest="channels", help="List software channels")
 parser.add_option("-P", "--parentchannel", dest="parentchannel", type="string", help="When cloning, use this parent channel")
+parser.add_option("-R", "--removechildchannel", dest="removechildchannel", type="string", help="Child channel to remove from machine")
 parser.add_option("-S", "--softwarechannel", dest="softwarechannel", type="string", help="Use this software channel")
 parser.add_option("-T", "--tasks", action="store_true",dest="tasks", help="List tasks")
 parser.add_option("-U", "--uploadfile", action="store_true", dest="uploadfile", help="Upload text config file to specified channel and path, which need to be passed as arguments")
@@ -81,6 +83,7 @@ parser.add_option("-3", "--satpassword", dest="satpassword", type="string", help
 
 (options, args)=parser.parse_args()
 adderratas=options.adderratas
+basechannel=options.basechannel
 client=options.client
 clients=options.clients
 machines=options.machines
@@ -96,6 +99,7 @@ configchannel=options.configchannel
 deletechannel=options.deletechannel
 clonechannel=options.clonechannel
 children=options.children
+removechildchannel=options.removechildchannel
 destchannelname=options.destchannelname
 configs=options.configs
 extendedconfigs=options.extendedconfigs
@@ -758,7 +762,80 @@ if configchannel and len(args)==1:
    print "%s added to Config Channel %s" % (name,configchannel)
  
 
-if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys:
+#subscribe given machine to indicated basechannel
+if basechannel and len(args)==1:
+ name=args[0]
+ #TEST SPECIFIED CHANNEL EXISTS
+ checksoftwarechannel(sat,key,basechannel)
+ systemid=sat.system.getId(key,name)
+ if not systemid or len(systemid)>1:
+  print "Machine %s not found or duplicated.Not doing anything" % (name)
+  sys.exit(0)
+ systemid=systemid[0]["id"]
+ sat.system.setBaseChannel(key,systemid,basechannel)
+ print "channel %s set as basechannel for %s" % (basechannel,name)
+ if children:
+  childrenselected=[]
+  childreninfo=sat.channel.software.listChildren(key,basechannel)
+  if len(childreninfo) >=1:
+   for child in childreninfo:
+    childname=child["label"]
+    add=raw_input("Add %s as chilchannel for this machine(y/N):\n" % childname)
+    if add=="Y":childrenselected.append(childname)
+  if len(childrenselected) >=1:
+    sat.system.setChildChannels(key,systemid,childrenselected)
+    print "The following Child channels were added to %s:" % (name)
+    for child in sorted(childrenselected):print child
+
+#subscribe given machine to indicated childchannel
+if softwarechannel and len(args)==1:
+ name=args[0]
+ #TEST SPECIFIED CHANNEL EXISTS
+ checksoftwarechannel(sat,key,softwarechannel)
+ systemid=sat.system.getId(key,name)
+ if not systemid or len(systemid)>1:
+  print "Machine %s not found or duplicated.Not doing anything" % (name)
+  sys.exit(0)
+ systemid=systemid[0]["id"]
+ childreninfo=sat.system.listSubscribedChildChannels(key,sytemid)
+ childchannels=[]
+ for child in childreninfo:
+  label=child["label"]
+  if label==softwarechannel:
+   print "Machine allready subscribed to child channel %s.Not doing anything" % (softwarechannel)
+   sys.exit(1)
+  else:
+   childchannels.append(child["label"])
+ childchannels.append(label)
+ sat.system.setChildChannels(key,systemid,childchannels)
+ print "Child channel %s added to %s:" % (softwarechannel,name)
+
+
+#remove  given childchannel of indicated machine
+if removechildchannel and len(args)==1:
+ name=args[0]
+ #TEST SPECIFIED CHANNEL EXISTS
+ checksoftwarechannel(sat,key,removechildchannel)
+ systemid=sat.system.getId(key,name)
+ if not systemid or len(systemid)>1:
+  print "Machine %s not found or duplicated.Not doing anything" % (name)
+  sys.exit(0)
+ systemid=systemid[0]["id"]
+ childreninfo=sat.system.listSubscribedChildChannels(key,systemid)
+ childchannels=[]
+ childfound=False
+ for child in childreninfo:
+  label=child["label"]
+  if label==removechildchannel:
+   childfound=True
+   continue
+  childchannels.append(child["label"])
+ if not childfound:
+  print "Machine allready subscribed to child channel %s.Not doing anything" % (removechildchannel)
+  sys.exit(1)
+ sat.system.setChildChannels(key,systemid,childchannels)
+
+if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel:
  print "No action specified"
  sys.exit(1)
 
