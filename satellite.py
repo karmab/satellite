@@ -52,7 +52,7 @@ parser.add_option("-f", "--deploy",dest="deploy", type="string", help="Deploy sp
 parser.add_option("-g", "--groups", action="store_true", dest="groups", help="List System Groups")
 parser.add_option("-k", "--ks", action="store_true", dest="ks", help="List Kickstarts")
 parser.add_option("-l", "--clients", action="store_true", dest="clients", help="List Available clients")
-parser.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines")
+parser.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines or move them to destination channel upon cloning")
 parser.add_option("-r", "--revision", dest="revision", type="int", default=0, help="When showing contents with -s , get specific revision")
 parser.add_option("-s", "--showcontents", action="store_true", dest="showcontents",help="When getting file with -z, show contents")
 parser.add_option("-t", "--getfile",  action="store_true", dest="getfile", help="Get config file")
@@ -327,7 +327,7 @@ if activationkeys:
   print "%s;%s;%s" % (k["key"],k["description"],k["base_channel_label"])
  sys.exit()
 
-if machines:
+if machines and not clonechannel:
  results=[]
  ids={}
  machines={}
@@ -518,6 +518,9 @@ if duplicatescripts:
   copyprofile(sat,key,oriprofile,destprofile)
 
 if clonechannel: 
+ childmapping={}
+ basechannel=False
+ setchannelname=False
  if not adderratas:adderratas=False
  if not softwarechannel:
   softwarechannel=raw_input("Enter original channel:\n")
@@ -525,9 +528,9 @@ if clonechannel:
    print "Software channel cant be blank"
    sys.exit(1)
  checksoftwarechannel(sat,key,softwarechannel)
- if children:
-  childrenlist=[]
-  for child in sat.channel.software.listChildren(key,softwarechannel):childrenlist.append(child["label"])
+ childrenlist=[]
+ if not sat.channel.software.getDetails(key,softwarechannel).has_key("parent_channel_label"):basechannel=True
+ for child in sat.channel.software.listChildren(key,softwarechannel):childrenlist.append(child["label"])
  if len(args)==1:
   destchannel=args[0]
  else:
@@ -535,31 +538,76 @@ if clonechannel:
  if destchannel =="" or len(destchannel) < 6:
    print "Destination channel cant be blank or less than 6 characters"
    sys.exit(1)
- if not destchannelname:destchannelname=sat.channel.software.getDetails(key,softwarechannel)["name"]
+ if not destchannelname:
+  destchannelname=destchannel
+  setchannelname=True
+  orichannelname=sat.channel.software.getDetails(key,softwarechannel)["name"]
  destchannelinfo={"name":destchannelname,"label":destchannel,"summary":destchannelname}
+ if machines:
+  systems={}
+  systeminfo=sat.channel.software.listSubscribedSystems(key,softwarechannel)
+  for item in systeminfo:
+   systemid=item["id"]
+   systems[systemid]=[] 
+   name=sat.system.getName(key,systemid)["name"]
+   print "Machine %s will be moved to new channels" % name
+   for element in sat.system.listSubscribedChildChannels(key,systemid):systems[systemid].append(element["label"])
  if parentchannel:
   checksoftwarechannel(sat,key,parentchannel)
   destchannelinfo["parent_label"]=parentchannel
+ else:
+  softwarechanneldetails=sat.channel.software.getDetails(key,softwarechannel)
+  if softwarechanneldetails.has_key("parent_channel_label"):destchannelinfo["parent_label"]=softwarechanneldetails["parent_channel_label"]
  if adderratas:
   sat.channel.software.clone(key,softwarechannel,destchannelinfo,False)
  else:
   sat.channel.software.clone(key,softwarechannel,destchannelinfo,True)
  print "Channel %s successfully cloned to %s" % (softwarechannel,destchannel)
+ if setchannelname:
+  #change name afterwards
+  channelinfo={}
+  channelinfo["name"]="x"+sat.channel.software.getDetails(key,softwarechannel)["name"]
+  destchannelid=sat.channel.software.getDetails(key,destchannel)["id"]
+  sat.channel.software.setDetails(key,destchannelid,channelinfo)
  if adderratas and checkerratas:
   print "erratas should be added"
  if children:
   for child in childrenlist:
-   destchildchannel=raw_input("Enter Destination channel for %s:\n" % child)
+   destchildchannel=raw_input("Enter Destination channel for %s\n" % child)
    if destchildchannel =="" or len(destchildchannel) < 6:
     print "Destination channel cant be blank or less than 6 characters"
-    sys.exit(1)
+    sys.exit(1) 
    destchildchannelname=sat.channel.software.getDetails(key,child)["name"]
-   destchildchannelinfo={"name":destchildchannelname,"label":destchildchannel,"summary":destchildchannel,"parent_label":destchannel}
+   childmapping[child]=destchildchannel
+   destchildchannelinfo={"name":destchildchannel,"label":destchildchannel,"summary":destchildchannel,"parent_label":destchannel}
    if adderratas:
     sat.channel.software.clone(key,child,destchildchannelinfo,False)
    else:
     sat.channel.software.clone(key,child,destchildchannelinfo,True)
    print "Channel %s successfully cloned to %s" % (child,destchildchannel)
+   #change name afterwards
+   channelinfo={}
+   channelinfo["name"]="x"+sat.channel.software.getDetails(key,child)["name"]
+   destchildchannelid=sat.channel.software.getDetails(key,destchildchannel)["id"]
+   sat.channel.software.setDetails(key,destchildchannelid,channelinfo)
+ if machines:
+  for systemid in systems:
+   name=sat.system.getName(key,systemid)["name"]
+   if basechannel:
+    sat.system.setBaseChannel(key,systemid,destchannel)
+    newchildren=[]
+    for channel in systems[systemid]:newchildren.append(childmapping[channel])
+    sat.system.setChildChannels(key,systemid,newchildren)
+    print "Child channels changed for System %s" % (name)
+   else:
+    newchildren=[]
+    for channel in systems[systemid]:
+     if channel !=softwarechannel:newchildren.append(channel)
+    newchildren.append(destchannel)
+    #sat.system.setChildChannels(key,systemid,systems[systemid])
+    sat.system.setChildChannels(key,systemid,newchildren)
+    print "Child channels changed for System %s" % (name)
+ sys.exit(0)
    
 if deletechannel: 
  if len(args)==1:softwarechannel=args[0]
@@ -569,6 +617,10 @@ if deletechannel:
    print "Software channel cant be blank"
    sys.exit(1)
  checksoftwarechannel(sat,key,softwarechannel)
+ systems=sat.channel.software.listSubscribedSystems(key,softwarechannel)
+ if len(systems) >=1:
+  print "Note the following machines will be unsubscribed from this channel!!!:"
+  for system in systems:print system["name"]
  confirmation=raw_input("Confirm you want to delete Destination channel %s(Y|N):\n" % softwarechannel)
  if confirmation !="Y":
    print "Leaving"
