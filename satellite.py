@@ -34,14 +34,14 @@ import time,datetime
 __author__ = "Karim Boumedhel"
 __credits__ = ["Karim Boumedhel","Pablo Iranzo"]
 __license__ = "GPL"
-__version__ = "2.0"
+__version__ = "2.1"
 __maintainer__ = "Karim Boumedhel"
 __email__ = "karimboumedhel@gmail.com"
 __status__ = "Production"
 
 #-1-handle arguments
 usage="satellite.py [OPTION] [ARGS]"
-version="2.0"
+version="2.1"
 parser = optparse.OptionParser(usage=usage,version=version)
 parser.add_option("-a", "--add", action="store_true", dest="adderratas", help="When cloning,add erratas to clone")
 parser.add_option("-b", "--basechannel",dest="basechannel", type="string", help="Set basechannel for specified machine")
@@ -80,6 +80,8 @@ parser.add_option("-Z", "--createfile", action="store_true", dest="createfile", 
 parser.add_option("-1", "--sathost", dest="sathost", type="string", help="Satellite Host, if not defined in conf file")
 parser.add_option("-2", "--satuser", dest="satuser", type="string", help="Satellite User, if not defined in conf file")
 parser.add_option("-3", "--satpassword", dest="satpassword", type="string", help="Satellite Password, if not defined in conf file. Note a path can also be specified in conjunction with passwordfile=True in the rc file, to use a bz2-encrypted file containing password")
+parser.add_option("-4", "--channelname", dest="channelname", type="string", help="Change channel name(not label)")
+parser.add_option("-5", "--channelnameclean", action="store_true", dest="channelnameclean", help="Clean channel names for channel and all its children,removing trailing x possibly set when cloning channel")
 
 (options, args)=parser.parse_args()
 adderratas=options.adderratas
@@ -120,6 +122,8 @@ duplicatescripts=options.duplicatescripts
 tasks=options.tasks
 deletesystem=options.deletesystem
 execute=options.execute
+channelname=options.channelname
+channelnameclean=options.channelnameclean
 deploy=options.deploy
 history=options.history
 mac=True
@@ -352,16 +356,20 @@ if channels:
  channels={}
  for chan in sorted(sat.channel.listAllChannels(key)):
   channels[chan["label"]]=[chan["name"],chan["packages"],chan["systems"],chan["id"]]
- print "LABEL;NAME;PACKAGES;SYSTEMS"
+ print "LABEL;NAME;SYSTEMS"
  if softwarechannel:
   if channels.has_key(softwarechannel):
-   print "%s;%s;%s;%s" % (softwarechannel,channels[softwarechannel][0],channels[softwarechannel][1],channels[softwarechannel][2])
+   print "%s;%s;%s" % (softwarechannel,channels[softwarechannel][0],channels[softwarechannel][2])
    if children:
      childchannels=[]
      childreninfo=sat.channel.software.listChildren(key,softwarechannel)
      if len(childreninfo) >=1:
       print "CHILDCHANNELS:"
-      for child in childreninfo:print child["label"]
+      for child in sorted(childreninfo):
+       childlabel=child["label"]
+       childname=child["name"]
+       numsystems=sat.channel.software.listSubscribedSystems(key,childlabel)
+       print "%s;%s;%d" % (childlabel,childname,len(numsystems))
    sys.exit(0)
   else:
    print "Channel not found"
@@ -529,7 +537,7 @@ if clonechannel:
    sys.exit(1)
  checksoftwarechannel(sat,key,softwarechannel)
  childrenlist=[]
- if not sat.channel.software.getDetails(key,softwarechannel).has_key("parent_channel_label"):basechannel=True
+ if sat.channel.software.getDetails(key,softwarechannel)["parent_channel_label"]=="":basechannel=True
  for child in sat.channel.software.listChildren(key,softwarechannel):childrenlist.append(child["label"])
  if len(args)==1:
   destchannel=args[0]
@@ -557,7 +565,7 @@ if clonechannel:
   destchannelinfo["parent_label"]=parentchannel
  else:
   softwarechanneldetails=sat.channel.software.getDetails(key,softwarechannel)
-  if softwarechanneldetails.has_key("parent_channel_label"):destchannelinfo["parent_label"]=softwarechanneldetails["parent_channel_label"]
+  if softwarechanneldetails["parent_channel_label"] !="":destchannelinfo["parent_label"]=softwarechanneldetails["parent_channel_label"]
  if adderratas:
   sat.channel.software.clone(key,softwarechannel,destchannelinfo,False)
  else:
@@ -594,7 +602,9 @@ if clonechannel:
   for systemid in systems:
    name=sat.system.getName(key,systemid)["name"]
    if basechannel:
+    destchannelid=sat.channel.software.getDetails(key,destchannel)["id"]
     sat.system.setBaseChannel(key,systemid,destchannel)
+    print "Channel %s set as basechannel for %s" % (destchannel,name)
     newchildren=[]
     for channel in systems[systemid]:newchildren.append(childmapping[channel])
     sat.system.setChildChannels(key,systemid,newchildren)
@@ -888,7 +898,39 @@ if removechildchannel and len(args)==1:
   sys.exit(1)
  sat.system.setChildChannels(key,systemid,childchannels)
 
-if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel:
+if softwarechannel and channelname:
+ #TEST SPECIFIED CHANNEL EXISTS
+ checksoftwarechannel(sat,key,softwarechannel)
+ channelinfo={}
+ channelinfo["name"]=channelname
+ destchannelid=sat.channel.software.getDetails(key,softwarechannel)["id"]
+ sat.channel.software.setDetails(key,destchannelid,channelinfo)
+ print "Channel name changed for %s" % (softwarechannel)
+
+if softwarechannel and channelnameclean:
+ #TEST SPECIFIED CHANNEL EXISTS
+ checksoftwarechannel(sat,key,softwarechannel)
+ channelinfo=sat.channel.software.getDetails(key,softwarechannel)
+ channelid=channelinfo["id"]
+ channelname=channelinfo["name"]
+ if channelname.startswith("x"):
+  channelinfo={}
+  channelinfo["name"]=channelname[1:]
+  sat.channel.software.setDetails(key,channelid,channelinfo)
+  print "Channel name changed for %s" % (softwarechannel)
+ else:
+  print "No need to change Channel for %s" % (softwarechannel)
+ for child in sat.channel.software.listChildren(key,softwarechannel):
+  childlabel=child["label"]
+  childid=child["id"]
+  childname=child["name"]
+  if childname.startswith("x"):
+   channelinfo={}
+   channelinfo["name"]=childname[1:]
+   sat.channel.software.setDetails(key,childid,channelinfo)
+   print "Channel name changed for %s" % (childlabel)
+   
+if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname:
  print "No action specified"
  sys.exit(1)
 
