@@ -356,10 +356,10 @@ if channels:
  channels={}
  for chan in sorted(sat.channel.listAllChannels(key)):
   channels[chan["label"]]=[chan["name"],chan["packages"],chan["systems"],chan["id"]]
- print "LABEL;NAME;SYSTEMS"
+ print "LABEL;NAME;PACKAGES;SYSTEMS"
  if softwarechannel:
   if channels.has_key(softwarechannel):
-   print "%s;%s;%s" % (softwarechannel,channels[softwarechannel][0],channels[softwarechannel][2])
+   print "%s;%s;%s;%s" % (softwarechannel,channels[softwarechannel][0],channels[softwarechannel][1],channels[softwarechannel][2])
    if children:
      childchannels=[]
      childreninfo=sat.channel.software.listChildren(key,softwarechannel)
@@ -369,7 +369,8 @@ if channels:
        childlabel=child["label"]
        childname=child["name"]
        numsystems=sat.channel.software.listSubscribedSystems(key,childlabel)
-       print "%s;%s;%d" % (childlabel,childname,len(numsystems))
+       numpackages=sat.channel.software.listAllPackages(key,childlabel)
+       print "%s;%s;%s;%d" % (childlabel,childname,len(numpackages),len(numsystems))
    sys.exit(0)
   else:
    print "Channel not found"
@@ -740,7 +741,9 @@ if history:
     eventid=event['id']
     result=sat.system.getScriptActionDetails(key,eventid)
     content=result["content"]
-    output=result["result"][0]["output"]
+    detailedresults=result["result"]
+    output="N/A(Might need to wait)"
+    if len(detailedresults)>=1:output=detailedresults[0]["output"]
     print "INPUT:\n%s" % content
     print "OUTPUT:\n%s" % output
    else:
