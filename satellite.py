@@ -43,7 +43,6 @@ __status__ = "Production"
 usage="satellite.py [OPTION] [ARGS]"
 version="2.1"
 parser = optparse.OptionParser(usage=usage,version=version)
-parser.add_option("-a", "--add", action="store_true", dest="adderratas", help="When cloning,add erratas to clone")
 parser.add_option("-b", "--basechannel",dest="basechannel", type="string", help="Set basechannel for specified machine")
 parser.add_option("-c", "--client",dest="client", type="string", help="Specify Client")
 parser.add_option("-d", "--deletechannel", action="store_true", dest="deletechannel", help="Delete software channel")
@@ -84,7 +83,6 @@ parser.add_option("-4", "--channelname", dest="channelname", type="string", help
 parser.add_option("-5", "--channelnameclean", action="store_true", dest="channelnameclean", help="Clean channel names for channel and all its children,removing trailing x possibly set when cloning channel")
 
 (options, args)=parser.parse_args()
-adderratas=options.adderratas
 basechannel=options.basechannel
 client=options.client
 clients=options.clients
@@ -229,7 +227,10 @@ def getinfo(sat,key,machine,machines,ids,custominfo,groups=False,children=childr
   channel=sat.system.getSubscribedBaseChannel(key,id)["label"]
   if softwarechannel and channel!=softwarechannel:return
   checked=str(sat.system.getId(key,machine)[0]["last_checkin"]).split("T")[0]
-  product=dmi["product"]
+  if not dmi:
+   product=""
+  else:
+   product=dmi["product"]
   for net in network:
    if net.has_key("ip") and net["ip"] !="127.0.0.1" and net["ip"] !="":
     ips.append(net["ip"])
@@ -329,6 +330,7 @@ if groups:
 if activationkeys:
  for k in sat.activationkey.listActivationKeys(key):
   print "%s;%s;%s" % (k["key"],k["description"],k["base_channel_label"])
+  #print k
  sys.exit()
 
 if machines and not clonechannel:
@@ -530,7 +532,6 @@ if clonechannel:
  childmapping={}
  basechannel=False
  setchannelname=False
- if not adderratas:adderratas=False
  if not softwarechannel:
   softwarechannel=raw_input("Enter original channel:\n")
   if softwarechannel =="":
@@ -567,10 +568,7 @@ if clonechannel:
  else:
   softwarechanneldetails=sat.channel.software.getDetails(key,softwarechannel)
   if softwarechanneldetails["parent_channel_label"] !="":destchannelinfo["parent_label"]=softwarechanneldetails["parent_channel_label"]
- if adderratas:
-  sat.channel.software.clone(key,softwarechannel,destchannelinfo,False)
- else:
-  sat.channel.software.clone(key,softwarechannel,destchannelinfo,True)
+ sat.channel.software.clone(key,softwarechannel,destchannelinfo,True)
  print "Channel %s successfully cloned to %s" % (softwarechannel,destchannel)
  if setchannelname:
   #change name afterwards
@@ -578,8 +576,6 @@ if clonechannel:
   channelinfo["name"]="x"+sat.channel.software.getDetails(key,softwarechannel)["name"]
   destchannelid=sat.channel.software.getDetails(key,destchannel)["id"]
   sat.channel.software.setDetails(key,destchannelid,channelinfo)
- if adderratas and checkerratas:
-  print "erratas should be added"
  if children:
   for child in childrenlist:
    destchildchannel=raw_input("Enter Destination channel for %s\n" % child)
@@ -589,10 +585,7 @@ if clonechannel:
    destchildchannelname=sat.channel.software.getDetails(key,child)["name"]
    childmapping[child]=destchildchannel
    destchildchannelinfo={"name":destchildchannel,"label":destchildchannel,"summary":destchildchannel,"parent_label":destchannel}
-   if adderratas:
-    sat.channel.software.clone(key,child,destchildchannelinfo,False)
-   else:
-    sat.channel.software.clone(key,child,destchildchannelinfo,True)
+   sat.channel.software.clone(key,child,destchildchannelinfo,True)
    print "Channel %s successfully cloned to %s" % (child,destchildchannel)
    #change name afterwards
    channelinfo={}
@@ -737,7 +730,7 @@ if history:
    print "Info for %s:" % system
    event=sat.system.listSystemEvents(key,ids[system])[-1:][0]
    if event['action_type'] in ["Run an arbitrary script","Deploy config files to system scheduled by Administrador"]:
-    print "DATE:%s %s" % (str(event["pickup_date"]).split("T")[0], str(event["pickup_date"]).split("T")[1])
+    if event.has_key("pickup_date"):print "DATE:%s %s" % (str(event["pickup_date"]).split("T")[0], str(event["pickup_date"]).split("T")[1])
     eventid=event['id']
     result=sat.system.getScriptActionDetails(key,eventid)
     content=result["content"]
