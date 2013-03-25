@@ -34,14 +34,14 @@ import time,datetime
 __author__ = "Karim Boumedhel"
 __credits__ = ["Karim Boumedhel","Pablo Iranzo"]
 __license__ = "GPL"
-__version__ = "2.1"
+__version__ = "2.2"
 __maintainer__ = "Karim Boumedhel"
 __email__ = "karimboumedhel@gmail.com"
 __status__ = "Production"
 
 #-1-handle arguments
 usage="satellite.py [OPTION] [ARGS]"
-version="2.1"
+version="2.2"
 parser = optparse.OptionParser(usage=usage,version=version)
 parser.add_option("-b", "--basechannel",dest="basechannel", type="string", help="Set basechannel for specified machine")
 parser.add_option("-c", "--client",dest="client", type="string", help="Specify Client")
@@ -568,7 +568,7 @@ if clonechannel:
  else:
   softwarechanneldetails=sat.channel.software.getDetails(key,softwarechannel)
   if softwarechanneldetails["parent_channel_label"] !="":destchannelinfo["parent_label"]=softwarechanneldetails["parent_channel_label"]
- sat.channel.software.clone(key,softwarechannel,destchannelinfo,True)
+ sat.channel.software.clone(key,softwarechannel,destchannelinfo,False)
  print "Channel %s successfully cloned to %s" % (softwarechannel,destchannel)
  if setchannelname:
   #change name afterwards
@@ -585,7 +585,7 @@ if clonechannel:
    destchildchannelname=sat.channel.software.getDetails(key,child)["name"]
    childmapping[child]=destchildchannel
    destchildchannelinfo={"name":destchildchannel,"label":destchildchannel,"summary":destchildchannel,"parent_label":destchannel}
-   sat.channel.software.clone(key,child,destchildchannelinfo,True)
+   sat.channel.software.clone(key,child,destchildchannelinfo,False)
    print "Channel %s successfully cloned to %s" % (child,destchildchannel)
    #change name afterwards
    channelinfo={}
