@@ -43,8 +43,6 @@ __status__ = "Production"
 usage="satellite.py [OPTION] [ARGS]"
 version="2.2"
 parser = optparse.OptionParser(usage=usage,version=version)
-parser.add_option("-X", "--delete", action="store_true", dest="deletesystem", help="Delete specified system. A confirmation will be asked")
-parser.add_option("-D", "--duplicatescripts", action="store_true", dest="duplicatescripts", help="Duplicate scripts from this profile")
 
 executegroup = optparse.OptionGroup(parser, "Execute options")
 executegroup.add_option("-e", "--execute",dest="execute", type="string", help="Execute given command")
@@ -96,6 +94,11 @@ connectiongroup.add_option("-1", "--sathost", dest="sathost", type="string", hel
 connectiongroup.add_option("-2", "--satuser", dest="satuser", type="string", help="Satellite User, if not defined in conf file")
 connectiongroup.add_option("-3", "--satpassword", dest="satpassword", type="string", help="Satellite Password, if not defined in conf file. Note a path can also be specified in conjunction with passwordfile=True in the ini file, to use a bz2-encrypted file containing password")
 parser.add_option_group(connectiongroup)
+
+miscellaneousgroup = optparse.OptionGroup(parser, "Miscellaneous options")
+miscellaneousgroup.add_option("-X", "--delete", action="store_true", dest="deletesystem", help="Delete specified system. A confirmation will be asked")
+miscellaneousgroup.add_option("-D", "--duplicatescripts", action="store_true", dest="duplicatescripts", help="Duplicate scripts from this profile")
+parser.add_option_group(miscellaneousgroup)
 
 (options, args)=parser.parse_args()
 basechannel=options.basechannel
