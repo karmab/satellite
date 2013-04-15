@@ -1017,7 +1017,7 @@ if deleteak:
  result=sat.activationkey.delete(key,ak)
  if result==1:
   print "Activation Key %s successfully deleted" % (ak)
- else
+ else:
   print "Problem deleting Activation Key %s" % (ak)
  sys.exit(0)
 
