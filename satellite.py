@@ -98,11 +98,14 @@ deletegroup.add_option("-d", "--deletechannel", action="store_true", dest="delet
 deletegroup.add_option("-R", "--removechildchannel", dest="removechildchannel", type="string", help="Child channel to remove from machine")
 deletegroup.add_option("-X", "--delete", action="store_true", dest="deletesystem", help="Delete specified system. A confirmation will be asked")
 deletegroup.add_option("-D", "--duplicatescripts", action="store_true", dest="duplicatescripts", help="Duplicate scripts from this profile")
+deletegroup.add_option("-7", "--deleteak", action="store_true", dest="deleteak", help="Delete activation key")
 parser.add_option_group(deletegroup)
 
 miscellaneousgroup = optparse.OptionGroup(parser, "Miscellaneous options")
-miscellaneousgroup.add_option("--clonekey", action="store_true", dest="clonekey", help="Clone activation key")
-miscellaneousgroup.add_option("--activationkey", type="string", dest="activationkey", help="Activation Key to use")
+miscellaneousgroup.add_option("--cloneak", action="store_true", dest="cloneak", help="Clone activation key")
+miscellaneousgroup.add_option("-a", "--ak", type="string", dest="ak", help="Activation Key to use")
+miscellaneousgroup.add_option("-8", "--filterori", type="string", dest="filterori", help="Reemplacement of this string in all information related to the original activation key when cloning. Allows customizing the destination key when you have a homogeneous channel structure")
+miscellaneousgroup.add_option("-9", "--filterdest", type="string", dest="filterdest", help="The reemplacement  string in all information related to the original activation key when cloning. Allows customizing the destination key when you have a homogeneous channel structure")
 parser.add_option_group(miscellaneousgroup)
 
 (options, args)=parser.parse_args()
@@ -148,8 +151,11 @@ channelnameclean=options.channelnameclean
 deploy=options.deploy
 history=options.history
 mac=True
-activationkey=options.activationkey
-clonekey=options.clonekey
+ak=options.ak
+cloneak=options.cloneak
+deleteak=options.deleteak
+filterori=options.filterori
+filterdest=options.filterdest
 
 def checksoftwarechannel(sat,key,softwarechannel):
  allsoftwarechannels = sat.channel.listAllChannels(key)
@@ -159,11 +165,11 @@ def checksoftwarechannel(sat,key,softwarechannel):
  sys.exit(1)
 
 
-def checkactivationkey(sat,key,activationkey):
- allactivationkeys = sat.activationkey.listActivationKeys(key) 
- for key in allactivationkeys:
-  if key["key"]==activationkey:return True
- print "Activation Key %s not found" % activationkey
+def checkak(sat,key,ak):
+ allaks = sat.activationkey.listActivationKeys(key) 
+ for key in allaks:
+  if key["key"]==ak:return True
+ print "Activation Key %s not found" % ak
  sys.exit(1)
 
 
@@ -962,33 +968,60 @@ if softwarechannel and channelnameclean:
    print "Channel name changed for %s" % (childlabel)
    
 
-if clonekey: 
+if cloneak: 
  if len(args)==1:
-  destkey=args[0]
+  destak=args[0]
  else:
-  print "Usage:satellite.py --clonekey --activationkey orikey destkey"
+  print "Usage:satellite.py --cloneak --ak oriak destak"
   sys.exit(0)
- if not activationkey:
-  activationkey=raw_input("Enter original activation key:\n")
-  if activationkey =="":
+ if not ak:
+  ak=raw_input("Enter original activation key:\n")
+  if ak =="":
    print "Activation Key cant be blank"
    sys.exit(1)
- checkactivationkey(sat,key,activationkey)
- orikey=sat.activationkey.getDetails(key,activationkey)
- packages=orikey["packages"]
- description=orikey["description"]
- base_channel_label=orikey["base_channel_label"]
- server_group_ids=orikey["server_group_ids"]
- entitlements=orikey["entitlements"]
- universal_default=orikey["universal_default"]
- usage_limit=orikey["usage_limit"]
- #print destkey,description,base_channel_label,entitlements,universal_default
- result=sat.activationkey.create(key,destkey,description,base_channel_label,entitlements,universal_default)
- if result==1:
-  print "Activation Key %s successfully cloned" % (activationkey)
+ checkak(sat,key,ak)
+ oriak=sat.activationkey.getDetails(key,ak)
+ oriconf=sat.activationkey.listConfigChannels(key,ak)
+ confchannels=[]
+ for conf in oriconf:confchannels.append(conf["label"])
+ packages=oriak["packages"]
+ description=oriak["description"]
+ base_channel_label=oriak["base_channel_label"]
+ child_channel_labels=oriak["child_channel_labels"]
+ server_group_ids=oriak["server_group_ids"]
+ entitlements=oriak["entitlements"]
+ universal_default=oriak["universal_default"]
+ usage_limit=oriak["usage_limit"]
+ if filterori and filterdest:
+  description=description.replace(filterori,filterdest)
+  base_channel_label=base_channel_label.replace(filterori,filterdest) 
+  child_channel_labels2,server_group_ids2=[],[]
+  for child in child_channel_labels:child_channel_labels2.append(child.replace(filterori,filterdest))
+  for server in server_group_ids:server_group_ids2.append(int(str(server).replace(filterori,filterdest)))
+  child_channel_labels,server_group_ids=child_channel_labels2,server_group_ids2
+ destkey=sat.activationkey.create(key,destkey,description,base_channel_label,entitlements,universal_default)
+ sat.activationkey.addPackages(key,destak,packages)
+ sat.activationkey.addServerGroups(key,destak,server_group_ids)
+ sat.activationkey.addChildChannels(key,destak,child_channel_labels)
+ sat.activationkey.addConfigChannels(key,destak,confchannels,True)
+ print "Activation Key %s successfully cloned to %s" % (ak,destak)
  sys.exit(0)
 
-if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not clonekey:
+if deleteak: 
+ if len(args)==1:
+  ak=args[0]
+ else:
+  print "Usage:satellite.py --deleteak ak"
+  sys.exit(0)
+ checkak(sat,key,ak)
+ result=sat.activationkey.delete(key,ak)
+ if result==1:
+  print "Activation Key %s successfully deleted" % (ak)
+ else
+  print "Problem deleting Activation Key %s" % (ak)
+ sys.exit(0)
+
+if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak:
  print "No action specified"
  sys.exit(1)
 
