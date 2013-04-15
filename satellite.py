@@ -999,11 +999,11 @@ if cloneak:
   for child in child_channel_labels:child_channel_labels2.append(child.replace(filterori,filterdest))
   for server in server_group_ids:server_group_ids2.append(int(str(server).replace(filterori,filterdest)))
   child_channel_labels,server_group_ids=child_channel_labels2,server_group_ids2
- destkey=sat.activationkey.create(key,destkey,description,base_channel_label,entitlements,universal_default)
+ destak=sat.activationkey.create(key,destak,description,base_channel_label,entitlements,universal_default)
  sat.activationkey.addPackages(key,destak,packages)
  sat.activationkey.addServerGroups(key,destak,server_group_ids)
  sat.activationkey.addChildChannels(key,destak,child_channel_labels)
- sat.activationkey.addConfigChannels(key,destak,confchannels,True)
+ sat.activationkey.addConfigChannels(key,[destak],confchannels,True)
  print "Activation Key %s successfully cloned to %s" % (ak,destak)
  sys.exit(0)
 
