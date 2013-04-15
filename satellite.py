@@ -100,6 +100,11 @@ deletegroup.add_option("-X", "--delete", action="store_true", dest="deletesystem
 deletegroup.add_option("-D", "--duplicatescripts", action="store_true", dest="duplicatescripts", help="Duplicate scripts from this profile")
 parser.add_option_group(deletegroup)
 
+miscellaneousgroup = optparse.OptionGroup(parser, "Miscellaneous options")
+miscellaneousgroup.add_option("--clonekey", action="store_true", dest="clonekey", help="Clone activation key")
+miscellaneousgroup.add_option("--activationkey", type="string", dest="activationkey", help="Activation Key to use")
+parser.add_option_group(miscellaneousgroup)
+
 (options, args)=parser.parse_args()
 basechannel=options.basechannel
 client=options.client
@@ -143,6 +148,8 @@ channelnameclean=options.channelnameclean
 deploy=options.deploy
 history=options.history
 mac=True
+activationkey=options.activationkey
+clonekey=options.clonekey
 
 def checksoftwarechannel(sat,key,softwarechannel):
  allsoftwarechannels = sat.channel.listAllChannels(key)
@@ -150,6 +157,16 @@ def checksoftwarechannel(sat,key,softwarechannel):
   if chan["label"]==softwarechannel:return True
  print "Channel %s not found" % softwarechannel
  sys.exit(1)
+
+
+def checkactivationkey(sat,key,activationkey):
+ allactivationkeys = sat.activationkey.listActivationKeys(key) 
+ for key in allactivationkeys:
+  if key["key"]==activationkey:return True
+ print "Activation Key %s not found" % activationkey
+ sys.exit(1)
+
+
 
 def checkprofile(sat,key,name):
  kickstarts=sat.kickstart.listKickstarts(key)
@@ -944,7 +961,34 @@ if softwarechannel and channelnameclean:
    sat.channel.software.setDetails(key,childid,channelinfo)
    print "Channel name changed for %s" % (childlabel)
    
-if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname:
+
+if clonekey: 
+ if len(args)==1:
+  destkey=args[0]
+ else:
+  print "Usage:satellite.py --clonekey --activationkey orikey destkey"
+  sys.exit(0)
+ if not activationkey:
+  activationkey=raw_input("Enter original activation key:\n")
+  if activationkey =="":
+   print "Activation Key cant be blank"
+   sys.exit(1)
+ checkactivationkey(sat,key,activationkey)
+ orikey=sat.activationkey.getDetails(key,activationkey)
+ packages=orikey["packages"]
+ description=orikey["description"]
+ base_channel_label=orikey["base_channel_label"]
+ server_group_ids=orikey["server_group_ids"]
+ entitlements=orikey["entitlements"]
+ universal_default=orikey["universal_default"]
+ usage_limit=orikey["usage_limit"]
+ #print destkey,description,base_channel_label,entitlements,universal_default
+ result=sat.activationkey.create(key,destkey,description,base_channel_label,entitlements,universal_default)
+ if result==1:
+  print "Activation Key %s successfully cloned" % (activationkey)
+ sys.exit(0)
+
+if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not clonekey:
  print "No action specified"
  sys.exit(1)
 
