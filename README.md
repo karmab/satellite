@@ -25,7 +25,6 @@ satellite.py -k
 satellite.py  --cloneprofile --profile  testdev-ib-base-6_4 testpro-ib-base-6_4
 #the same with filters
 satellite.py  -8 6_4 -9 6_3 --cloneprofile --profile  testdev-ib-base-6_4 testpro-ib-base-6_3
-
 #delete profile
 satellite.py -7 testpro-ib-base-6_4
 
