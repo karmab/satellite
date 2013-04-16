@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/python
 
 #
 #  Copyright Red Hat, Inc. 2002-2004, 2012
@@ -15,12 +15,12 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with this program; see the file COPYING.  If not, write to the
-#  Free Software Foundation, Inc.,  675 Mass Ave, Cambridge, 
+#  Free Software Foundation, Inc.,  675 Mass Ave, Cambridge,
 #  MA 02139, USA.
 
 """
 interacts with satellite api
-(based on http://spacewalk.redhat.com/documentation/api/1.8 ) 
+(based on http://spacewalk.redhat.com/documentation/api/1.8 )
 """
 
 import bz2
@@ -76,8 +76,8 @@ listinggroup = optparse.OptionGroup(parser, "Listing options")
 listinggroup.add_option("-g", "--groups", action="store_true", dest="groups", help="List System Groups")
 listinggroup.add_option("-l", "--clients", action="store_true", dest="clients", help="List Available clients")
 listinggroup.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines or move them to destination channel upon cloning")
-listinggroup.add_option("-k", "--ks", action="store_true", dest="ks", help="List Kickstarts")
-listinggroup.add_option("-K", "--extendedks", action="store_true", dest="extendedks", help="List Kickstarts,along with their scripts")
+listinggroup.add_option("-k", "--profiles", action="store_true", dest="profiles", help="List Profiles")
+listinggroup.add_option("-K", "--extendedprofiles", action="store_true", dest="extendedprofiles", help="List Profiles,along with their scripts")
 listinggroup.add_option("-A", "--activationkeys", action="store_true", dest="activationkeys", help="List activation keys")
 listinggroup.add_option("-F", "--configs", action="store_true", dest="configs", help="List config channels")
 listinggroup.add_option("-G", "--extendedconfigs", action="store_true", dest="extendedconfigs", help="List config channels,and systems subscribed to them")
@@ -98,7 +98,8 @@ deletegroup.add_option("-d", "--deletechannel", action="store_true", dest="delet
 deletegroup.add_option("-R", "--removechildchannel", dest="removechildchannel", type="string", help="Child channel to remove from machine")
 deletegroup.add_option("-X", "--delete", action="store_true", dest="deletesystem", help="Delete specified system. A confirmation will be asked")
 deletegroup.add_option("-D", "--duplicatescripts", action="store_true", dest="duplicatescripts", help="Duplicate scripts from this profile")
-deletegroup.add_option("-7", "--deleteak", action="store_true", dest="deleteak", help="Delete activation key")
+deletegroup.add_option("-6", "--deleteak", action="store_true", dest="deleteak", help="Delete activation key")
+deletegroup.add_option("-7", "--deleteprofile", action="store_true", dest="deleteprofile", help="Delete profile")
 parser.add_option_group(deletegroup)
 
 miscellaneousgroup = optparse.OptionGroup(parser, "Miscellaneous options")
@@ -106,6 +107,8 @@ miscellaneousgroup.add_option("--cloneak", action="store_true", dest="cloneak", 
 miscellaneousgroup.add_option("-a", "--ak", type="string", dest="ak", help="Activation Key to use")
 miscellaneousgroup.add_option("-8", "--filterori", type="string", dest="filterori", help="Reemplacement of this string in all information related to the original activation key when cloning. Allows customizing the destination key when you have a homogeneous channel structure")
 miscellaneousgroup.add_option("-9", "--filterdest", type="string", dest="filterdest", help="The reemplacement  string in all information related to the original activation key when cloning. Allows customizing the destination key when you have a homogeneous channel structure")
+miscellaneousgroup.add_option("--cloneprofile",action="store_true",dest="cloneprofile", help="Clone profile")
+miscellaneousgroup.add_option("--profile",type="string",dest="profile", help="Use this profile")
 parser.add_option_group(miscellaneousgroup)
 
 (options, args)=parser.parse_args()
@@ -114,8 +117,8 @@ client=options.client
 clients=options.clients
 machines=options.machines
 groups=options.groups
-ks=options.ks
-extendedks=options.extendedks
+profiles=options.profiles
+extendedprofiles=options.extendedprofiles
 users=options.users
 channels=options.channels
 activationkeys=options.activationkeys
@@ -154,8 +157,11 @@ mac=True
 ak=options.ak
 cloneak=options.cloneak
 deleteak=options.deleteak
+deleteprofile=options.deleteprofile
 filterori=options.filterori
 filterdest=options.filterdest
+cloneprofile=options.cloneprofile
+profile=options.profile
 
 def checksoftwarechannel(sat,key,softwarechannel):
  allsoftwarechannels = sat.channel.listAllChannels(key)
@@ -174,18 +180,18 @@ def checkak(sat,key,ak):
 
 
 
-def checkprofile(sat,key,name):
+def checkprofile(sat,key,profile):
  kickstarts=sat.kickstart.listKickstarts(key)
  found=False
  for k in kickstarts:
-  if k["name"]==name:
+  if k["name"]==profile:
    treelabel=k["tree_label"]
    active=k["active"]
    found=True
    advanced_mode=k["advanced_mode"]
    break
  if not found:
-  print "Profile %s not found" % (name)
+  print "Profile %s not found" % (profile)
   sys.exit(0)
  return treelabel,active,advanced_mode
 
@@ -201,7 +207,6 @@ def getscripts(sat,key,name,advanced_mode):
 
 def copyprofile(sat,key,oriprofile,destprofile):
   oriscripts=sat.kickstart.profile.listScripts(key,oriprofile)
-  destscripts=sat.kickstart.profile.listScripts(key,destprofile)
   #for script in destscripts:
   # sat.kickstart.profile.removeScript(key,destprofile,script["id"])
   addscripts={}
@@ -229,9 +234,9 @@ def gettasks(sat,key):
     taskdate=str(t["earliest"]).split("T")[0]
     if taskdate==now:print "%s;%s;completed %s; progress %s; failed %s;date %s" % (tasktype,t["name"],t["completedSystems"],t["inProgressSystems"],t["failedSystems"],taskdate)
     id=t["id"]
-    progresssystems=sat.schedule.listInProgressSystems(key,id)
+    #progresssystems=sat.schedule.listInProgressSystems(key,id)
     completedsystems=sat.schedule.listCompletedSystems(key,id)
-    failedsystems=sat.schedule.listFailedSystems(key,id)
+    #failedsystems=sat.schedule.listFailedSystems(key,id)
     print completedsystems
     sys.exit(0)
 
@@ -681,31 +686,31 @@ if deletechannel:
   print "Channel %s successfully deleted" % (softwarechannel)
   sys.exit(0)
 
-if ks or extendedks:
+if profiles or extendedprofiles:
  if len(args)==1:
-  name=args[0]
-  treelabel,active,advanced_mode=checkprofile(sat,key,name)
-  print "%s;Treelabel:%s;Active:%s;AdvancedMode:%s" % (name,treelabel,active,advanced_mode)
+  profile=args[0]
+  treelabel,active,advanced_mode=checkprofile(sat,key,profile)
+  print "%s;Treelabel:%s;Active:%s;AdvancedMode:%s" % (profile,treelabel,active,advanced_mode)
   if not advanced_mode:
-   scripts=sat.kickstart.profile.listScripts(key,name)
+   scripts=sat.kickstart.profile.listScripts(key,profile)
    for script in scripts:
     if script != []:
      template=""
      if script.has_key("template"):template=script["template"]
      print "Template:%s;Chroot:%s;Type:%s;Interpreter:%s" % (template,script["chroot"],script["script_type"],script["interpreter"])
      print "%s\n" % (script["contents"])
-  elif extendedks:
-   print sat.kickstart.profile.downloadRenderedKickstart(key,name)
+  elif extendedprofiles:
+   print sat.kickstart.profile.downloadRenderedKickstart(key,profile)
   sys.exit(0)
  for k in sorted(sat.kickstart.listKickstarts(key)):
-  name=k["name"]
+  profile=k["name"]
   treelabel=k["tree_label"]
   active=k["active"]
   advanced_mode=k["advanced_mode"]
-  print "%s;Treelabel:%s;Active:%s;AdvancedMode:%s" % (name,treelabel,active,advanced_mode)
-  if not extendedks:continue
+  print "%s;Treelabel:%s;Active:%s;AdvancedMode:%s" % (profile,treelabel,active,advanced_mode)
+  if not extendedprofiles:continue
   if not advanced_mode:
-   scripts=sat.kickstart.profile.listScripts(key,name)
+   scripts=sat.kickstart.profile.listScripts(key,profile)
    for script in scripts:
     if script != []:
      template=""
@@ -713,7 +718,7 @@ if ks or extendedks:
      print "Template:%s;Chroot:%s;Type:%s;Interpreter:%s" % (template,script["chroot"],script["script_type"],script["interpreter"])
      print "%s\n" % (script["contents"])
   else:
-   print "N/A:Use %s -K %s to get all kickstart details" % (sys.argv[0],name)
+   print "N/A:Use %s -K %s to get all kickstart details" % (sys.argv[0],profile)
   
 if tasks:
  gettasks(sat,key)
@@ -817,7 +822,7 @@ if deploy:
     #if we allready found a matching file within this directory, exits stating there are too man
     if filefound:
      print "Several files matching found within this configchannel, not doing anything...."
-     print deploypath,f["path"]
+     print f["path"]
      sys.exit(1)
     else:
      filefound=True
@@ -1028,8 +1033,77 @@ if deleteak:
   print "Problem deleting Activation Key %s" % (ak)
  sys.exit(0)
 
+if cloneprofile:
+    if len(args)==1:
+     destprofile=args[0]
+    else:
+     print "Usage:satellite.py --cloneprofile --profile oriprofile destprofile"
+     sys.exit(0)
+    if not profile:
+     profile=raw_input("Enter original activation key:\n")
+    if profile =="":
+     print "Profile cant be blank"
+     sys.exit(1)
+    checkprofile(sat,key,profile)
+    result=sat.kickstart.cloneProfile(key,profile,destprofile)
+    if result==1:
+     print "Profile %s successfully cloned to %s" % (profile,destprofile)
+    else:
+     print "Problem cloning"
+    if filterori and filterdest:
+     childchannels=sat.kickstart.profile.getChildChannels(key,profile)
+     #replace kickstart and url using filters
+     ksfilterori=filterori.replace("_",".")
+     ksfilterdest=filterdest.replace("_",".")
+     kstree=sat.kickstart.profile.getKickstartTree(key,profile)
+     newkstree=kstree.replace(ksfilterori,ksfilterdest)
+     if newkstree!=kstree:
+      sat.kickstart.profile.setKickstartTree(key,destprofile,newkstree)
+     advancedoptions=sat.kickstart.profile.getAdvancedOptions(key,profile)
+     for option in advancedoptions:
+         if option["name"]=="url":url=option["arguments"]
+         if option["name"]=="lang":lang=option
+         if option["name"]=="keyboard":keyboard=option
+         if option["name"]=="bootloader":bootloader=option
+         if option["name"]=="auth":auth=option
+         if option["name"]=="rootpw":rootpw=option
+         if option["name"]=="timezone":timezone=option
+     newurl=url.replace(ksfilterori,ksfilterdest)
+     if newurl!=url:
+         sat.kickstart.profile.setAdvancedOptions(key,destprofile,[lang,keyboard,bootloader,auth,rootpw,timezone,{'name': 'url', 'arguments': newurl}])
+     #replace activation keys using filters
+     aks=sat.kickstart.profile.keys.getActivationKeys(key,destprofile)
+     newaks=[]
+     deleteaks=[]
+     for ak in aks:
+      oldak=ak["key"]
+      newak=ak["key"].replace(filterori,filterdest)
+      if oldak!=newak:
+       newaks.append(newak)
+       deleteaks.append(oldak)
+     if deleteaks!=[]:
+      for ak in deleteaks:
+       sat.kickstart.profile.keys.removeActivationKey(key,destprofile,ak)
+     if newaks!=[]:
+      for ak in newaks:
+       sat.kickstart.profile.keys.addActivationKey(key,destprofile,ak)
+    sys.exit(0)
 
-if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak:
+if deleteprofile: 
+ if len(args)==1:
+  profile=args[0]
+ else:
+  print "Usage:satellite.py --deleteprofile profile"
+  sys.exit(0)
+ checkprofile(sat,key,profile)
+ result=sat.kickstart.deleteProfile(key,profile)
+ if result==1:
+  print "Profile %s successfully deleted" % (profile)
+ else:
+  print "Problem deleting Profile %s" % (profile)
+ sys.exit(0)
+
+if not machines and not users and not clients and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile:
  print "No action specified"
  sys.exit(1)
 
