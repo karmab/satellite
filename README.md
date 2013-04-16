@@ -7,5 +7,6 @@ needs a .satelliterc (will possibly be changed to satellite.ini or something lik
 
 Examples
 #clone a AK
-satellite.py --clonekey --activationkey 1-base-6.4 prout
-satellite.py --clonekey -8 6_4 -9 6_3 --activationkey 1-base-6_4 base-6_3
+satellite.py --cloneak --ak 1-base-6.4 prout
+#same with filters to change destinations
+satellite.py --cloneak -8 6_4 -9 6_3 --ak 1-base-6_4 base-6_3

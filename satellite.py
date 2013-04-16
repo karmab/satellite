@@ -997,8 +997,15 @@ if cloneak:
   base_channel_label=base_channel_label.replace(filterori,filterdest) 
   child_channel_labels2,server_group_ids2=[],[]
   for child in child_channel_labels:child_channel_labels2.append(child.replace(filterori,filterdest))
-  for server in server_group_ids:server_group_ids2.append(int(str(server).replace(filterori,filterdest)))
-  child_channel_labels,server_group_ids=child_channel_labels2,server_group_ids2
+  for gid in server_group_ids:
+   gname=sat.systemgroup.getDetails(key,gid)["name"]
+   gname2=gname.replace(filterori,filterdest)
+   if gname2!=gname:
+    newgid=sat.systemgroup.getDetails(key,gname2)["id"]
+   else:
+    newgid=gid    
+   server_group_ids2.append(newgid)    
+  child_channel_labels,server_group_ids=child_channel_labels2,server_group_ids2 
  destak=sat.activationkey.create(key,destak,description,base_channel_label,entitlements,universal_default)
  sat.activationkey.addPackages(key,destak,packages)
  sat.activationkey.addServerGroups(key,destak,server_group_ids)
@@ -1020,6 +1027,7 @@ if deleteak:
  else:
   print "Problem deleting Activation Key %s" % (ak)
  sys.exit(0)
+
 
 if not machines and not users and not clients and not groups and not ks and not extendedks and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak:
  print "No action specified"
