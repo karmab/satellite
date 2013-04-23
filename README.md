@@ -23,6 +23,7 @@ PROFILES
 satellite.py -k
 #clone profile
 satellite.py  --cloneprofile --profile  testdev-ib-base-6_4 testpro-ib-base-6_4
+satellite.py  --cloneprofile --profile  zdestest6 destest-6_4
 #the same with filters
 satellite.py  -8 6_4 -9 6_3 --cloneprofile --profile  testdev-ib-base-6_4 testpro-ib-base-6_3
 #delete profile

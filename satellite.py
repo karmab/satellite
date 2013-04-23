@@ -76,6 +76,7 @@ listinggroup = optparse.OptionGroup(parser, "Listing options")
 listinggroup.add_option("-g", "--groups", action="store_true", dest="groups", help="List System Groups")
 listinggroup.add_option("-l", "--clients", action="store_true", dest="clients", help="List Available clients")
 listinggroup.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines or move them to destination channel upon cloning")
+listinggroup.add_option("-p", "--package", type="string", dest="package", help="List all channels where indicated package can be found")
 listinggroup.add_option("-k", "--profiles", action="store_true", dest="profiles", help="List Profiles")
 listinggroup.add_option("-K", "--extendedprofiles", action="store_true", dest="extendedprofiles", help="List Profiles,along with their scripts")
 listinggroup.add_option("-A", "--activationkeys", action="store_true", dest="activationkeys", help="List activation keys")
@@ -162,6 +163,7 @@ filterori=options.filterori
 filterdest=options.filterdest
 cloneprofile=options.cloneprofile
 profile=options.profile
+package=options.package
 
 def checksoftwarechannel(sat,key,softwarechannel):
  allsoftwarechannels = sat.channel.listAllChannels(key)
@@ -1053,10 +1055,16 @@ if cloneprofile:
     if filterori and filterdest:
      childchannels=sat.kickstart.profile.getChildChannels(key,profile)
      #replace kickstart and url using filters
-     ksfilterori=filterori.replace("_",".")
-     ksfilterdest=filterdest.replace("_",".")
+     #ksfilterori=filterori.replace("_",".")
+     #ksfilterdest=filterdest.replace("_",".")
      kstree=sat.kickstart.profile.getKickstartTree(key,profile)
-     newkstree=kstree.replace(ksfilterori,ksfilterdest)
+     #handle rhel5 weird ks trees up to rhel5.6"
+     major,minor=filterdest.split("_")
+     if int(major)==5 and int(minor)<=6:
+      newkstree="ks-rhel-x86_64-server-%s-u%s" % (major,minor)
+     else: 
+      newkstree="ks-rhel-x86_64-server-%s-%s.%s" % (major,major,minor)
+      #newkstree=kstree.replace(ksfilterori,ksfilterdest)
      if newkstree!=kstree:
       sat.kickstart.profile.setKickstartTree(key,destprofile,newkstree)
      advancedoptions=sat.kickstart.profile.getAdvancedOptions(key,profile)
@@ -1068,7 +1076,9 @@ if cloneprofile:
          if option["name"]=="auth":auth=option
          if option["name"]=="rootpw":rootpw=option
          if option["name"]=="timezone":timezone=option
-     newurl=url.replace(ksfilterori,ksfilterdest)
+     #newurl=url.replace(ksfilterori,ksfilterdest)
+     #newurl=url.replace(kstree,newkstree)
+     newurl=url.replace(kstree,newkstree)
      if newurl!=url:
          sat.kickstart.profile.setAdvancedOptions(key,destprofile,[lang,keyboard,bootloader,auth,rootpw,timezone,{'name': 'url', 'arguments': newurl}])
      #replace activation keys using filters
@@ -1103,9 +1113,24 @@ if deleteprofile:
   print "Problem deleting Profile %s" % (profile)
  sys.exit(0)
 
-if not machines and not users and not clients and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile:
- print "No action specified"
- sys.exit(1)
+if package:
+    packinfo = sat.packages.search.name(key,package)
+    channelslist=[]
+    for info in packinfo:
+        packageid = info["id"]
+        packagechannels = sat.packages.listProvidingChannels(key,packageid)
+        for chan in sorted(packagechannels):
+            if chan["name"] not in channelslist:
+                channelslist.append(chan["name"])
+    for chan in sorted(channelslist):
+        print chan
+    sys.exit(0)
+
+
+
+if not machines and not users and not clients and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile and not package:
+     print "No action specified"
+     sys.exit(1)
 
 sat.auth.logout(key)
 sys.exit(0)
