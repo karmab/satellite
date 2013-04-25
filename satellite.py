@@ -60,7 +60,7 @@ channelgroup.add_option("-I", "--channelsummary", dest="destchannelname", type="
 channelgroup.add_option("-S", "--softwarechannel", dest="softwarechannel", type="string", help="Use this software channel")
 channelgroup.add_option("-4", "--channelname", dest="channelname", type="string", help="Change channel name(not label)")
 channelgroup.add_option("-5", "--channelnameclean", action="store_true", dest="channelnameclean", help="Clean channel names for channel and all its children,removing trailing x possibly set when cloning channel")
-channelgroup.add_option("--removenewer", dest="removenewer", type="string", help="Delete packages with newer dates than the one provided as argument(using DD/MM/YY ) for channel provided with -S. Usefull to be sure than child channels for a given minor release created cloning from red hat channels dont have newer packages")
+channelgroup.add_option("--removenewer", dest="removenewer", type="string", help="Delete packages with newer dates than the one provided as argument(using YYYY-MM-DD ) for channel provided with -S. Usefull to be sure than child channels for a given minor release created cloning from red hat channels dont have newer packages")
 parser.add_option_group(channelgroup)
 
 configgroup = optparse.OptionGroup(parser, "Configuration options")
@@ -1130,23 +1130,28 @@ if package:
 
 if removenewer:
     if not softwarechannel:
-        print "Usage:satellite.py -S channel --removenewer DD/MM/YYYY"
+        print "Usage:satellite.py -S channel --removenewer YYYY-MM-DD"
         sys.exit(0)
     checksoftwarechannel(sat,key,softwarechannel)
     try:
-        day,month,year=removenewer.split("/")
-        print day,month,year
+        year,month,day=removenewer.split("-")
     except:    
-        print "Usage:satellite.py -S channel --removenewer DD/MM/YYYY"
+        print "Usage:satellite.py -S channel --removenewer YYYY-MM-DD"
         os._exit(1)
     maxdate = datetime.datetime(int(year) , int(month), int(day) ,23 ,59 )
     badpackages=sat.channel.software.listAllPackages(key,softwarechannel,maxdate)
     removelist=[]
-    for pack in badpackages:
-        packageid=int(pack["id"])
-        removelist.append(packageid)
-    sat.channel.software.removePackages(key,softwarechannel,removelist)
-    print "%d packages removed from channel %s" % (len(removelist),softwarechannel)
+    if len(badpackages) > 0:
+        print "Following packages will be removed" 
+        for pack in badpackages:
+            packageid=int(pack["id"])
+            removelist.append(packageid)
+            print "%s-%s-%s.%s" % (pack["name"], pack["version"], pack["release"], pack["arch_label"])
+        sat.channel.software.removePackages(key,softwarechannel,removelist)
+        print "\n"
+        print "%d packages removed from channel %s" % (len(removelist),softwarechannel)
+    else:
+        print "No packages to remove"
     sys.exit(0)
 
 
