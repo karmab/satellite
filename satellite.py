@@ -109,8 +109,9 @@ miscellaneousgroup.add_option("--cloneak", action="store_true", dest="cloneak", 
 miscellaneousgroup.add_option("-a", "--ak", type="string", dest="ak", help="Activation Key to use")
 miscellaneousgroup.add_option("-8", "--filterori", type="string", dest="filterori", help="Reemplacement of this string in all information related to the original activation key when cloning. Allows customizing the destination key when you have a homogeneous channel structure")
 miscellaneousgroup.add_option("-9", "--filterdest", type="string", dest="filterdest", help="The reemplacement  string in all information related to the original activation key when cloning. Allows customizing the destination key when you have a homogeneous channel structure")
-miscellaneousgroup.add_option("--cloneprofile",action="store_true",dest="cloneprofile", help="Clone profile")
-miscellaneousgroup.add_option("--profile",type="string",dest="profile", help="Use this profile")
+miscellaneousgroup.add_option("--cloneprofile", action="store_true", dest="cloneprofile", help="Clone profile")
+miscellaneousgroup.add_option("--advancedoption", type="choice", dest="advancedoption", choices = ["reboot", "poweroff", "skipx", "text", "zerombr" ], help="set advanced option for given profile. can be reboot,poweroff,skipx,text,zerombr")
+miscellaneousgroup.add_option("--profile", type="string", dest="profile", help="Use this profile")
 parser.add_option_group(miscellaneousgroup)
 
 (options, args)=parser.parse_args()
@@ -163,6 +164,7 @@ deleteprofile=options.deleteprofile
 filterori=options.filterori
 filterdest=options.filterdest
 cloneprofile=options.cloneprofile
+advancedoption=options.advancedoption
 profile=options.profile
 package=options.package
 removenewer=options.removenewer
@@ -1037,6 +1039,37 @@ if deleteak:
   print "Problem deleting Activation Key %s" % (ak)
  sys.exit(0)
 
+if advancedoption:
+    if not profile and len(args)==1:
+     profile=args[0]
+    elif not profile:
+     profile=raw_input("Enter original activation key:\n")
+    if profile =="":
+     print "Profile cant be blank"
+     sys.exit(1)
+    checkprofile(sat,key,profile)
+    advancedoptions = sat.kickstart.profile.getAdvancedOptions(key,profile)
+    newoptions = []
+    for option in advancedoptions:
+        if option["name"]==advancedoption:
+            print "option allready set"
+            sys.exit(0)
+        elif advancedoption == "reboot" and option["name"]=="poweroff":
+            continue
+        elif advancedoption == "poweroff" and option["name"]=="reboot":
+            continue
+        else:
+            newoptions.append(option)
+    newoptions.append( {'name': advancedoption} ) 
+    #result = sat.kickstart.profile.setAdvancedOptions(key,profile,[lang,keyboard,bootloader,auth,rootpw,timezone,url,advanced])
+    result = sat.kickstart.profile.setAdvancedOptions(key,profile,newoptions)
+    if result==1:
+     print "Profile %s successfully set with %s option" % (profile, advancedoption)
+    else:
+     print "Problem"
+    sys.exit(0)
+
+
 if cloneprofile:
     if len(args)==1:
      destprofile=args[0]
@@ -1070,19 +1103,17 @@ if cloneprofile:
      if newkstree!=kstree:
       sat.kickstart.profile.setKickstartTree(key,destprofile,newkstree)
      advancedoptions=sat.kickstart.profile.getAdvancedOptions(key,profile)
+     newoptions = []
      for option in advancedoptions:
-         if option["name"]=="url":url=option["arguments"]
-         if option["name"]=="lang":lang=option
-         if option["name"]=="keyboard":keyboard=option
-         if option["name"]=="bootloader":bootloader=option
-         if option["name"]=="auth":auth=option
-         if option["name"]=="rootpw":rootpw=option
-         if option["name"]=="timezone":timezone=option
-     #newurl=url.replace(ksfilterori,ksfilterdest)
-     #newurl=url.replace(kstree,newkstree)
+        if option["name"]=="url":
+            url=option["arguments"]
+            continue
+        else:
+            newoptions.append(option)
      newurl=url.replace(kstree,newkstree)
      if newurl!=url:
-         sat.kickstart.profile.setAdvancedOptions(key,destprofile,[lang,keyboard,bootloader,auth,rootpw,timezone,{'name': 'url', 'arguments': newurl}])
+         newoptions.append({'name': 'url', 'arguments': newurl})
+         sat.kickstart.profile.setAdvancedOptions(key,destprofile,newoptions)
      #replace activation keys using filters
      aks=sat.kickstart.profile.keys.getActivationKeys(key,destprofile)
      newaks=[]
@@ -1156,7 +1187,7 @@ if removenewer:
 
 
 
-if not machines and not users and not clients and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile and not package and not removenewer:
+if not machines and not users and not clients and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile and not package and not removenewer and not advancedoption:
      print "No action specified"
      sys.exit(1)
 
