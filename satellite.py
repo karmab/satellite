@@ -75,6 +75,7 @@ parser.add_option_group(configgroup)
 
 listinggroup = optparse.OptionGroup(parser, "Listing options")
 listinggroup.add_option("-g", "--groups", action="store_true", dest="groups", help="List System Groups")
+listinggroup.add_option("-i", "--id", type="string", dest="systemid", help="find machine matching provided systemid")
 listinggroup.add_option("-l", "--clients", action="store_true", dest="clients", help="List Available clients")
 listinggroup.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines or move them to destination channel upon cloning")
 listinggroup.add_option("-p", "--package", type="string", dest="package", help="List all channels where indicated package can be found")
@@ -168,6 +169,7 @@ advancedoption=options.advancedoption
 profile=options.profile
 package=options.package
 removenewer=options.removenewer
+systemid=options.systemid
 
 def checksoftwarechannel(sat,key,softwarechannel):
  allsoftwarechannels = sat.channel.listAllChannels(key)
@@ -378,6 +380,14 @@ if groups:
  for group in sorted(groups): print "%s;%s;%s;%s" % (group,groups[group][0],groups[group][1],groups[group][2])
  sys.exit(0)
 
+
+if systemid:
+ for machine in sat.system.listSystems(key):
+     if machine["id"] == int(systemid):
+        print machine["name"]
+        sys.exit(0)
+ print "No machine with this systemid found"
+ sys.exit(1)
 
 if activationkeys:
  for k in sat.activationkey.listActivationKeys(key):
@@ -1187,7 +1197,7 @@ if removenewer:
 
 
 
-if not machines and not users and not clients and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile and not package and not removenewer and not advancedoption:
+if not machines and not users and not clients and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile and not package and not removenewer and not advancedoption and not systemid:
      print "No action specified"
      sys.exit(1)
 
