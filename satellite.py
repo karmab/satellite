@@ -55,7 +55,7 @@ channelgroup.add_option("-b", "--basechannel",dest="basechannel", type="string",
 channelgroup.add_option("-P", "--parentchannel", dest="parentchannel", type="string", help="When cloning, use this parent channel")
 channelgroup.add_option("-w", "--clonechannel", action="store_true", dest="clonechannel", help="Clone software channel")
 channelgroup.add_option("-x", "--children", action="store_true", dest="children", help="Handle children when cloning,deleting software channels or listing a machine")
-channelgroup.add_option("-E", "--checkerratas", action="store_true", dest="checkerratas", help="Check erratas within software channel after cloning, to remove rpms from other releases")
+channelgroup.add_option("--checkerratas", action="store_true", dest="checkerratas", help="Check erratas within software channel after cloning, to remove rpms from other releases")
 channelgroup.add_option("-I", "--channelsummary", dest="destchannelname", type="string", help="When cloning, channel name and summary.will default to channel label if not present")
 channelgroup.add_option("-S", "--softwarechannel", dest="softwarechannel", type="string", help="Use this software channel")
 channelgroup.add_option("-4", "--channelname", dest="channelname", type="string", help="Change channel name(not label)")
@@ -75,6 +75,7 @@ parser.add_option_group(configgroup)
 
 listinggroup = optparse.OptionGroup(parser, "Listing options")
 listinggroup.add_option("-g", "--groups", action="store_true", dest="groups", help="List System Groups")
+listinggroup.add_option("-G", "--group", type="string", dest="group", help="List Systems within indicated group")
 listinggroup.add_option("-i", "--id", type="string", dest="systemid", help="find machine matching provided systemid")
 listinggroup.add_option("-l", "--clients", action="store_true", dest="clients", help="List Available clients")
 listinggroup.add_option("-m", "--machines", action="store_true", dest="machines", help="List Machines or move them to destination channel upon cloning")
@@ -83,7 +84,7 @@ listinggroup.add_option("-k", "--profiles", action="store_true", dest="profiles"
 listinggroup.add_option("-K", "--extendedprofiles", action="store_true", dest="extendedprofiles", help="List Profiles,along with their scripts")
 listinggroup.add_option("-A", "--activationkeys", action="store_true", dest="activationkeys", help="List activation keys")
 listinggroup.add_option("-F", "--configs", action="store_true", dest="configs", help="List config channels")
-listinggroup.add_option("-G", "--extendedconfigs", action="store_true", dest="extendedconfigs", help="List config channels,and systems subscribed to them")
+listinggroup.add_option("-E", "--extendedconfigs", action="store_true", dest="extendedconfigs", help="List config channels,and systems subscribed to them")
 listinggroup.add_option("-L", "--channels", action="store_true", dest="channels", help="List software channels")
 listinggroup.add_option("-T", "--tasks", action="store_true",dest="tasks", help="List tasks")
 listinggroup.add_option("-u", "--users", action="store_true", dest="users", help="List Users")
@@ -120,6 +121,7 @@ basechannel=options.basechannel
 client=options.client
 clients=options.clients
 machines=options.machines
+group=options.group
 groups=options.groups
 profiles=options.profiles
 extendedprofiles=options.extendedprofiles
@@ -371,6 +373,22 @@ key=sat.auth.login(satuser, satpassword)
 if users:
  users = sat.user.list_users(key)
  for user in users:print user.get('login')
+ sys.exit(0)
+
+
+if group:
+ groupfound=False
+ groups= sat.systemgroup.listAllGroups(key)
+ for g in groups:
+  if g["name"] == group:
+	groupfound=True
+	break
+ if not groupfound:
+	print "Group %s not found.Leaving..." % group
+        sys.exit(0)
+ machines= sat.systemgroup.listSystems(key,group)
+ for m in sorted(machines,key=lambda m: m["hostname"]):
+	print m["hostname"]
  sys.exit(0)
 
 if groups:
@@ -1195,9 +1213,7 @@ if removenewer:
         print "No packages to remove"
     sys.exit(0)
 
-
-
-if not machines and not users and not clients and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile and not package and not removenewer and not advancedoption and not systemid:
+if not machines and not users and not clients and not group and not groups and not profiles and not extendedprofiles and not channels and not configs and not extendedconfigs and not getfile and not uploadfile and not clonechannel and not deletechannel and not checkerratas  and not duplicatescripts and not tasks and not deletesystem and not execute and not deploy and not history and activationkeys and not basechannel and not softwarechannel and not removechildchannel and not channelname and not cloneak and deleteak and not cloneprofile and not package and not removenewer and not advancedoption and not systemid:
      print "No action specified"
      sys.exit(1)
 
